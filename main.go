@@ -17,13 +17,38 @@ func main(){
     defer dbmap.Db.Close()
 
     router := gin.Default()
-    router.LoadHTMLTemplates("templates/*.tmpl")
 
     router.GET("/articles", ArticlesList)
     router.POST("/articles", ArticlePost)
     router.GET("/articles/:id", ArticlesDetail)
 
     router.Run(":8000")
+}
+
+type Article struct {
+    Id int64 `db:"article_id"`
+    Created int64
+    Title string
+    Content string
+}
+
+func createArticle(title, body string) Article {
+    article := Article{
+        Created: time.Now().UnixNano(),
+        Title:   title,
+        Content:    body,
+    }
+
+    err := dbmap.Insert(&article)
+    checkErr(err, "Insert failed")
+    return article
+}
+
+func getArticle(article_id int) Article {
+    article := Article{}
+    err := dbmap.SelectOne(&article, "select * from articles where article_id=?", article_id)
+    checkErr(err, "SelectOne failed")
+    return article
 }
 
 func ArticlesList(c *gin.Context) {
@@ -43,7 +68,7 @@ func ArticlePost(c *gin.Context) {
     var json Article
 
     c.Bind(&json) // This will infer what binder to use depending on the content-type header.
-    article := newArticle(json.Title, json.Content)
+    article := createArticle(json.Title, json.Content)
     if article.Title == json.Title {
         content := gin.H{
             "result": "Success",
@@ -54,33 +79,6 @@ func ArticlePost(c *gin.Context) {
     } else {
         c.JSON(500, gin.H{"result": "An error occured"})
     }
-}
-
-
-type Article struct {
-    Id int64 `db:"article_id"`
-    Created int64
-    Title string
-    Content string
-}
-
-func newArticle(title, body string) Article {
-    article := Article{
-        Created: time.Now().UnixNano(),
-        Title:   title,
-        Content:    body,
-    }
-
-    err := dbmap.Insert(&article)
-    checkErr(err, "Insert failed")
-    return article
-}
-
-func getArticle(article_id int) Article {
-    article := Article{}
-    err := dbmap.SelectOne(&article, "select * from articles where article_id=?", article_id)
-    checkErr(err, "SelectOne failed")
-    return article
 }
 
 func initDb() *gorp.DbMap {
