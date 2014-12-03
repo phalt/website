@@ -17,11 +17,9 @@ func main(){
     defer dbmap.Db.Close()
 
     router := gin.Default()
-
     router.GET("/articles", ArticlesList)
     router.POST("/articles", ArticlePost)
     router.GET("/articles/:id", ArticlesDetail)
-
     router.Run(":8000")
 }
 
@@ -34,8 +32,8 @@ type Article struct {
 
 func createArticle(title, body string) Article {
     article := Article{
-        Created: time.Now().UnixNano(),
-        Title:   title,
+        Created:    time.Now().UnixNano(),
+        Title:      title,
         Content:    body,
     }
 
@@ -52,7 +50,13 @@ func getArticle(article_id int) Article {
 }
 
 func ArticlesList(c *gin.Context) {
-    content := gin.H{"title": "Paul"}
+    var articles []Article
+    _, err := dbmap.Select(&articles, "select * from articles order by article_id")
+    checkErr(err, "Select failed")
+    content := gin.H{}
+    for k, v := range articles {
+        content[strconv.Itoa(k)] = v
+    }
     c.JSON(200, content)
 }
 
